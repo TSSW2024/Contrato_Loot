@@ -4,57 +4,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
-type respuestaBinance struct {
+type respuesta_binance struct {
 	Symbol string `json:"symbol"`
 	Price  string `json:"price"`
 }
 
-type Moneda struct {
+type Monedas struct {
 	Icono        string
 	Nombre       string
 	Siglas       string
 	Ratio        float64
 	Ganancia     float64
 	Probabilidad float64
-	ID           string // Nuevo campo para almacenar el ID de CoinGecko
 }
 
-type coingeckoCoin struct {
-	ID     string `json:"id"`
+type coingeckocoin struct {
+	Id     string `json:"id"`
 	Symbol string `json:"symbol"`
 	Name   string `json:"name"`
-	Image  struct {
-		Thumb string `json:"thumb"`
-	} `json:"image"`
+	Image  string `json:"image"`
 }
 
-func obtenerDatosCoinGecko(symbol string) (coingeckoCoin, error) {
-	url := fmt.Sprintf("https://api.coingecko.com/api/v3/coins/%s", symbol)
-	resp, err := http.Get(url)
-	if err != nil {
-		return coingeckoCoin{}, fmt.Errorf("error al hacer la solicitud HTTP a CoinGecko: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return coingeckoCoin{}, fmt.Errorf("error: respuesta HTTP %v", resp.StatusCode)
-	}
-
-	var coin coingeckoCoin
-	if err := json.NewDecoder(resp.Body).Decode(&coin); err != nil {
-		return coingeckoCoin{}, fmt.Errorf("error al decodificar la respuesta JSON de CoinGecko: %v", err)
-	}
-
-	return coin, nil
-}
-
-func obtenerDatosCoinGeckoLista() (map[string]coingeckoCoin, error) {
-	url := "https://api.coingecko.com/api/v3/coins/list"
+func obtener_datos_geckocoin() (map[string]coingeckocoin, error) {
+	url := "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd"
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error al hacer la solicitud HTTP: %v", err)
@@ -63,106 +42,113 @@ func obtenerDatosCoinGeckoLista() (map[string]coingeckoCoin, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("error: respuesta HTTP %v", resp.StatusCode)
 	}
-	var coins []coingeckoCoin
+	var coins []coingeckocoin
 	if err := json.NewDecoder(resp.Body).Decode(&coins); err != nil {
 		return nil, fmt.Errorf("error al decodificar la respuesta JSON de CoinGecko: %v", err)
 	}
-	coinMap := make(map[string]coingeckoCoin)
+	coinMap := make(map[string]coingeckocoin)
 	for _, coin := range coins {
 		coinMap[strings.ToUpper(coin.Symbol)] = coin
 	}
 	return coinMap, nil
 }
 
-func crearMonedas() ([]Moneda, error) {
-	// Obtener datos de Binance
-	datosBinance, err := obtenerDatosBinance()
+func crear_monedas() ([]Monedas, error) {
+	url := "https://api.binance.com/api/v3/ticker/price"
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error al hacer la solicitud HTTP: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error: respuesta HTTP %v", resp.StatusCode)
+	}
+
+	var datos_binance []respuesta_binance
+	if err := json.NewDecoder(resp.Body).Decode(&datos_binance); err != nil {
+		return nil, fmt.Errorf("error al decodificar la respuesta JSON: %v", err)
+	}
+
+	coinGeckoMap, err := obtener_datos_geckocoin()
 	if err != nil {
 		return nil, err
 	}
 
-	// Obtener datos de CoinGecko
-	coinGeckoMap, err := obtenerDatosCoinGeckoLista()
-	if err != nil {
-		return nil, err
-	}
-
-	// Contar el número total de monedas USDT para calcular probabilidades
-	totalUSDT := 0.0
-	for _, datos := range datosBinance {
+	var monedas []Monedas
+	for _, datos := range datos_binance {
 		if strings.HasSuffix(datos.Symbol, "USDT") {
-			totalUSDT++
-		}
-	}
-
-	// Slice para almacenar las monedas a retornar
-	var monedas []Moneda
-
-	// Iterar sobre los datos de Binance
-	for _, datos := range datosBinance {
-		if strings.HasSuffix(datos.Symbol, "USDT") {
-			// Convertir el precio a float
 			precio, err := strconv.ParseFloat(datos.Price, 64)
 			if err != nil {
 				return nil, fmt.Errorf("error al convertir el precio a float: %v", err)
 			}
-
-			// Obtener las siglas de la moneda
 			siglas := strings.TrimSuffix(datos.Symbol, "USDT")
-
-			// Verificar si la moneda existe en CoinGecko
 			coinData, exists := coinGeckoMap[siglas]
 			if !exists {
 				continue
 			}
 
-			// Calcular la probabilidad
-			probabilidad := 1 / totalUSDT
-
-			// Obtener la URL del ícono desde CoinGecko
-			iconoURL := coinData.Image.Thumb
-
-			// Crear la estructura Moneda
-			moneda := Moneda{
-				Icono:        iconoURL,
+			ganancia := 1 / precio // Calcular ganancia como inversa del precio
+			moneda := Monedas{
+				Icono:        coinData.Image,
 				Nombre:       coinData.Name,
 				Siglas:       datos.Symbol,
-				Ratio:        1 / totalUSDT,
-				Ganancia:     1 / precio,
-				Probabilidad: probabilidad,
-				ID:           coinData.ID,
+				Ratio:        1 / float64(len(datos_binance)), // Ratio fijo, puedes ajustarlo según tu necesidad
+				Ganancia:     ganancia,
+				Probabilidad: ganancia, // Probabilidad proporcional a la ganancia
 			}
-
-			// Agregar la moneda al slice de monedas
 			monedas = append(monedas, moneda)
 		}
 	}
 
-	// Ajustar probabilidades para asegurar que sumen aproximadamente 1
-	sumaProbabilidades := 0.0
+	// Normalizar las probabilidades proporcionalmente a la ganancia
+	sumaGanancias := 0.0
 	for _, moneda := range monedas {
-		sumaProbabilidades += moneda.Probabilidad
+		sumaGanancias += moneda.Ganancia
 	}
 	for i := range monedas {
-		monedas[i].Probabilidad /= sumaProbabilidades
+		monedas[i].Probabilidad /= sumaGanancias
+	}
+
+	// Seleccionar 10 monedas aleatorias sin repetición
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	monedasAleatorias := make([]Monedas, 0, 10)
+	monedasSeleccionadas := make(map[int]bool)
+
+	for len(monedasAleatorias) < 10 {
+		indice := rng.Intn(len(monedas))
+		if !monedasSeleccionadas[indice] {
+			monedasAleatorias = append(monedasAleatorias, monedas[indice])
+			monedasSeleccionadas[indice] = true
+		}
+	}
+
+	// Ajustar probabilidades para las 10 monedas seleccionadas
+	sumaProbabilidades := 0.0
+	for _, moneda := range monedasAleatorias {
+		sumaProbabilidades += moneda.Probabilidad
+	}
+	for i := range monedasAleatorias {
+		monedasAleatorias[i].Probabilidad /= sumaProbabilidades
 	}
 
 	// Retornar las monedas y ningún error
-	return monedas, nil
+	return monedasAleatorias, nil
 }
 
-func sumaProbabilidadesAproximada(monedas []Moneda) bool {
+func sumaProbabilidadesAproximada(monedas []Monedas) bool {
 	sumaProbabilidad := 0.0
 	for _, moneda := range monedas {
 		sumaProbabilidad += moneda.Probabilidad
 	}
+
 	return math.Abs(sumaProbabilidad-1.0) < 0.0001
 }
 
 func main() {
-	monedas, err := crearMonedas()
+	monedas, err := crear_monedas()
 	if err != nil {
-		fmt.Printf("Error al obtener las monedas: %v\n", err)
+		fmt.Printf("Error al obtener las monedas de Binance: %v\n", err)
 		return
 	}
 
@@ -171,7 +157,7 @@ func main() {
 		fmt.Printf("Siglas: %s\n", moneda.Siglas)
 		fmt.Printf("Icono: %s\n", moneda.Icono)
 		fmt.Printf("Ganancia: %.8f%%\n", moneda.Ganancia*100)
-		fmt.Printf("Probabilidad: %.8f\n", moneda.Probabilidad)
+		fmt.Printf("Probabilidad: %.8f%%\n", moneda.Probabilidad*100)
 		fmt.Printf("Ratio: %.8f\n", moneda.Ratio)
 		fmt.Println("---")
 	}
@@ -181,24 +167,4 @@ func main() {
 	} else {
 		fmt.Println("Error: La suma de las probabilidades no es aproximadamente igual a 1.")
 	}
-}
-
-func obtenerDatosBinance() ([]respuestaBinance, error) {
-	url := "https://api.binance.com/api/v3/ticker/price"
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("error al hacer la solicitud HTTP a Binance: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error: respuesta HTTP %v", resp.StatusCode)
-	}
-
-	var datos []respuestaBinance
-	if err := json.NewDecoder(resp.Body).Decode(&datos); err != nil {
-		return nil, fmt.Errorf("error al decodificar la respuesta JSON de Binance: %v", err)
-	}
-
-	return datos, nil
 }
