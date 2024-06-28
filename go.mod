@@ -1,3 +1,3 @@
-module loot
+module libreria
 
 go 1.22.2
