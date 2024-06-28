@@ -12,7 +12,6 @@ spec:
       labels:
         app: api-loot
     spec:
-      serviceAccountName: api-loot
       containers:
       - name: api-loot
         image: {IMAGE_TAG}
