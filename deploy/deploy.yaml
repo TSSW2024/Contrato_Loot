@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-loot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-loot
+  template:
+    metadata:
+      labels:
+        app: api-loot
+    spec:
+      serviceAccountName: api-loot
+      containers:
+      - name: api-binance
+        image: {IMAGE_TAG}
+        ports:
+        - containerPort: 8082
+        resources:
+          # You must specify requests for CPU to autoscale
+          # based on CPU utilization
+          limits:
+            cpu: 50m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 128Mi

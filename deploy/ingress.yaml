@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-loot-ingress
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec: 
+  rules:
+  - host: api-loot.tss.cl
+    http:
+      paths:
+      - backend:
+          service:
+            name: api-loot-svc
+            port:
+              number: 80
+        pathType: Prefix
+        path: /
+  tls:
+  - hosts:
+    - api-loot.tss.cl
+    secretName: api-loot-ingress-secret

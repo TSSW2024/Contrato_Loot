@@ -145,26 +145,35 @@ func sumaProbabilidadesAproximada(monedas []Monedas) bool {
 	return math.Abs(sumaProbabilidad-1.0) < 0.0001
 }
 
-func main() {
+func handler(w http.ResponseWriter, r *http.Request) {
 	monedas, err := crear_monedas()
 	if err != nil {
-		fmt.Printf("Error al obtener las monedas de Binance: %v\n", err)
+		http.Error(w, fmt.Sprintf("Error al obtener las monedas de Binance: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	for _, moneda := range monedas {
-		fmt.Printf("Nombre: %s\n", moneda.Nombre)
-		fmt.Printf("Siglas: %s\n", moneda.Siglas)
-		fmt.Printf("Icono: %s\n", moneda.Icono)
-		fmt.Printf("Ganancia: %.8f%%\n", moneda.Ganancia*100)
-		fmt.Printf("Probabilidad: %.8f%%\n", moneda.Probabilidad*100)
-		fmt.Printf("Ratio: %.8f\n", moneda.Ratio)
-		fmt.Println("---")
+		fmt.Fprintf(w, "Nombre: %s\n", moneda.Nombre)
+		fmt.Fprintf(w, "Siglas: %s\n", moneda.Siglas)
+		fmt.Fprintf(w, "Icono: %s\n", moneda.Icono)
+		fmt.Fprintf(w, "Ganancia: %.8f%%\n", moneda.Ganancia*100)
+		fmt.Fprintf(w, "Probabilidad: %.8f%%\n", moneda.Probabilidad*100)
+		fmt.Fprintf(w, "Ratio: %.8f\n", moneda.Ratio)
+		fmt.Fprintln(w, "---")
 	}
 
 	if sumaProbabilidadesAproximada(monedas) {
-		fmt.Println("La suma de las probabilidades es aproximadamente igual a 1.")
+		fmt.Fprintln(w, "La suma de las probabilidades es aproximadamente igual a 1.")
 	} else {
-		fmt.Println("Error: La suma de las probabilidades no es aproximadamente igual a 1.")
+		fmt.Fprintln(w, "Error: La suma de las probabilidades no es aproximadamente igual a 1.")
+	}
+}
+
+func main() {
+	http.HandleFunc("/", handler)
+	port := "8082"
+	fmt.Printf("Servidor escuchando en el puerto %s\n", port)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		fmt.Printf("Error al iniciar el servidor: %v\n", err)
 	}
 }
