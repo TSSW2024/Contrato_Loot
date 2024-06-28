@@ -8,7 +8,6 @@ RUN go mod download
 COPY *.go .
 RUN go build -o app
 
-# Exponer el puerto 8082
 EXPOSE 8082
 
 ENTRYPOINT [ "./app" ]
