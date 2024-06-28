@@ -9,7 +9,7 @@ metadata:
     acme.cert-manager.io/http01-edit-in-place: "true"
 spec: 
   rules:
-  - host: api-loot.tss.cl
+  - host: api-loot.tssw.cl
     http:
       paths:
       - backend:
@@ -21,5 +21,5 @@ spec:
         path: /
   tls:
   - hosts:
-    - api-loot.tss.cl
+    - api-loot.tssw.cl
     secretName: api-loot-ingress-secret
