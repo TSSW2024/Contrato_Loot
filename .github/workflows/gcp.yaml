@@ -25,13 +25,6 @@ jobs:
       with:
         project_id: ${{ secrets.PROJECT_ID }}
 
-    - name: Login to GAR
-      uses: docker/login-action@v3
-      with:
-          registry: ${{ secrets.GKE_ZONE }}-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.SERVICE_ACCOUNT_KEY }}
-
     - name: Build Docker Image
       run: docker build -t ${{ secrets.REGISTRY_URL }}/${{ secrets.PROJECT_ID }}/images/${{ secrets.IMAGE_NAME }}:${{ github.sha }} .
 
