@@ -14,7 +14,7 @@ spec:
     spec:
       serviceAccountName: api-loot
       containers:
-      - name: api-binance
+      - name: api-loot
         image: {IMAGE_TAG}
         ports:
         - containerPort: 8082
