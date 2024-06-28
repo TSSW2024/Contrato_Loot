@@ -1,12 +1,20 @@
-FROM golang:1.21.0-alpine3.17 AS builder
-RUN apk add --no-cache git
+# Usa una imagen de Golang como base
+FROM golang:latest
+
+# Establece el directorio de trabajo dentro del contenedor
 WORKDIR /app
+
+# Copia el código actual al contenedor
 COPY . .
+
+# Descarga las dependencias del proyecto
 RUN go mod download
 
-COPY *.go .
-RUN go build -o app
+# Compila el código Go dentro del contenedor
+RUN go build -o main .
 
+# Expone el puerto 8082 en el contenedor
 EXPOSE 8082
 
-ENTRYPOINT [ "./app" ]
+# Comando por defecto para ejecutar la aplicación
+CMD ["./main"]
