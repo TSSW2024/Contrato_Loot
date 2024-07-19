@@ -151,7 +151,7 @@ func ajustar_probabilidades_caja(caja []Monedas) {
 	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func handlerCaja1(w http.ResponseWriter, r *http.Request) {
 	monedas, err := crear_monedas()
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error al obtener las monedas de Binance: %v", err), http.StatusInternalServerError)
@@ -159,33 +159,33 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	caja1 := crear_caja_1(monedas)
-	caja2 := crear_caja_2(monedas)
 	ajustar_probabilidades_caja(caja1)
-	ajustar_probabilidades_caja(caja2)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(caja1); err != nil {
+		http.Error(w, fmt.Sprintf("Error al codificar las monedas de la caja 1 a JSON: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
 
-	for _, moneda := range caja1 {
-		fmt.Fprintf(w, "Caja 1 - Nombre: %s\n", moneda.Nombre)
-		fmt.Fprintf(w, "Siglas: %s\n", moneda.Siglas)
-		fmt.Fprintf(w, "Icono: %s\n", moneda.Icono)
-		fmt.Fprintf(w, "Ganancia: %.8f%%\n", moneda.Ganancia*100)
-		fmt.Fprintf(w, "Probabilidad: %.8f%%\n", moneda.Probabilidad*100)
-		fmt.Fprintf(w, "Ratio: %.8f\n", moneda.Ratio)
-		fmt.Fprintln(w, "---")
+func handlerCaja2(w http.ResponseWriter, r *http.Request) {
+	monedas, err := crear_monedas()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error al obtener las monedas de Binance: %v", err), http.StatusInternalServerError)
+		return
 	}
 
-	for _, moneda := range caja2 {
-		fmt.Fprintf(w, "Caja 2 - Nombre: %s\n", moneda.Nombre)
-		fmt.Fprintf(w, "Siglas: %s\n", moneda.Siglas)
-		fmt.Fprintf(w, "Icono: %s\n", moneda.Icono)
-		fmt.Fprintf(w, "Ganancia: %.8f%%\n", moneda.Ganancia*100)
-		fmt.Fprintf(w, "Probabilidad: %.8f%%\n", moneda.Probabilidad*100)
-		fmt.Fprintf(w, "Ratio: %.8f\n", moneda.Ratio)
-		fmt.Fprintln(w, "---")
+	caja2 := crear_caja_2(monedas)
+	ajustar_probabilidades_caja(caja2)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(caja2); err != nil {
+		http.Error(w, fmt.Sprintf("Error al codificar las monedas de la caja 2 a JSON: %v", err), http.StatusInternalServerError)
+		return
 	}
 }
 
 func main() {
-	http.HandleFunc("/", handler)
+	http.HandleFunc("/caja1", handlerCaja1)
+	http.HandleFunc("/caja2", handlerCaja2)
 	port := "8082"
 	fmt.Printf("Servidor escuchando en el puerto %s\n", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
