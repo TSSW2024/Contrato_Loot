@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/rs/cors"
 )
 
 type respuesta_binance struct {
@@ -184,11 +186,24 @@ func handlerCaja2(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Define tus manejadores
 	http.HandleFunc("/caja1", handlerCaja1)
 	http.HandleFunc("/caja2", handlerCaja2)
+
+	// Configura CORS
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Permite todos los orígenes, puedes cambiar esto por los orígenes específicos que necesites
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	// Envuelve tu manejador HTTP con el manejador CORS
+	handler := c.Handler(http.DefaultServeMux)
+
 	port := "8082"
 	fmt.Printf("Servidor escuchando en el puerto %s\n", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		fmt.Printf("Error al iniciar el servidor: %v\n", err)
 	}
 }
